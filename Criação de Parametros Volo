@@ -1,0 +1,61 @@
+if not exists(select 1 from parametros with(nolock) where parametro = 'WMS_FAT_NATUREZA')
+insert into parametros (PARAMETRO,VALOR_ATUAL,DESC_PARAMETRO,PENULT_ATUALIZACAO,ULT_ATUALIZACAO,NOTA_PROGRAMADOR, TIPO_DADO,ENVIA_PARA_LOJA,PERMITE_POR_LOJA)
+values ('WMS_FAT_NATUREZA' ,'100.02', 'Naturaza Saida',GETDATE(),GETDATE(),'Naturaza Saida','C',1,0)  
+
+if not exists(select 1 from parametros with(nolock) where parametro = 'WMS_FAT_TRANSPORTADORA')
+insert into parametros (PARAMETRO,VALOR_ATUAL,DESC_PARAMETRO,PENULT_ATUALIZACAO,ULT_ATUALIZACAO,NOTA_PROGRAMADOR, TIPO_DADO,ENVIA_PARA_LOJA,PERMITE_POR_LOJA)
+values ('WMS_FAT_TRANSPORTADORA' ,'QUALITY TRANSPORTES', 'Transportadora padrão utilizada Faturamento',GETDATE(),GETDATE(),'Transportadora padrão utilizada Faturamento','C',1,0)
+
+if not exists(select 1 from parametros with(nolock) where parametro = 'WMS_FAT_TRANSPORTADORA_RE')
+insert into parametros (PARAMETRO,VALOR_ATUAL,DESC_PARAMETRO,PENULT_ATUALIZACAO,ULT_ATUALIZACAO,NOTA_PROGRAMADOR, TIPO_DADO,ENVIA_PARA_LOJA,PERMITE_POR_LOJA)
+values ('WMS_FAT_TRANSPORTADORA_RE' ,'QUALITY TRANSPORTES', 'Transportadora padrão utilizada Faturamento',GETDATE(),GETDATE(),'Transportadora padrão utilizada Faturamento','C',1,0)
+
+if not exists(select 1 from parametros with(nolock) where parametro = 'WMS_FAT_TIPO_FRETE')
+insert into parametros (PARAMETRO,VALOR_ATUAL,DESC_PARAMETRO,PENULT_ATUALIZACAO,ULT_ATUALIZACAO,NOTA_PROGRAMADOR, TIPO_DADO,ENVIA_PARA_LOJA,PERMITE_POR_LOJA)
+values ('WMS_FAT_TIPO_FRETE' ,'02', 'TIPO FRETE FATURAMENTO',GETDATE(),GETDATE(),'TIPO FRETE FATURAMENTO','C',1,0)  
+
+if not exists(select 1 from parametros with(nolock) where parametro = 'WMS_FAT_COD_TRANSACAO')
+insert into parametros (PARAMETRO,VALOR_ATUAL,DESC_PARAMETRO,PENULT_ATUALIZACAO,ULT_ATUALIZACAO,NOTA_PROGRAMADOR, TIPO_DADO,ENVIA_PARA_LOJA,PERMITE_POR_LOJA)
+values ('WMS_FAT_COD_TRANSACAO' ,'FATURAMENTO_037', 'CODIGO TRANSACAO TELA FATURAMENTO',GETDATE(),GETDATE(),'CODIGO TRANSACAO TELA FATURAMENTO','C',1,0)  
+
+if not exists(select 1 from parametros with(nolock) where parametro = 'WMS_FAT_TAB_FILHA')
+insert into parametros (PARAMETRO,VALOR_ATUAL,DESC_PARAMETRO,PENULT_ATUALIZACAO,ULT_ATUALIZACAO,NOTA_PROGRAMADOR, TIPO_DADO,ENVIA_PARA_LOJA,PERMITE_POR_LOJA)
+values ('WMS_FAT_TAB_FILHA' ,'FATURAMENTO_PROD', 'TABELA FILHA FAT',GETDATE(),GETDATE(),'TABELA FILHA FAT','C',1,0)  
+
+if not exists(select 1 from parametros with(nolock) where parametro = 'WMS_FAT_TIPO_VOLUME')
+insert into parametros (PARAMETRO,VALOR_ATUAL,DESC_PARAMETRO,PENULT_ATUALIZACAO,ULT_ATUALIZACAO,NOTA_PROGRAMADOR, TIPO_DADO,ENVIA_PARA_LOJA,PERMITE_POR_LOJA)
+values ('WMS_FAT_TIPO_VOLUME' ,'CAIXA DE PAPELAO', 'TIPO VOLUME FATURAMENTO',GETDATE(),GETDATE(),'TIPO VOLUME FATURAMENTO','C',1,0)  
+
+if not exists(select 1 from parametros with(nolock) where parametro = 'WMS_FAT_SERIE')
+insert into parametros (PARAMETRO,VALOR_ATUAL,DESC_PARAMETRO,PENULT_ATUALIZACAO,ULT_ATUALIZACAO,NOTA_PROGRAMADOR, TIPO_DADO,ENVIA_PARA_LOJA,PERMITE_POR_LOJA)
+values ('WMS_FAT_SERIE' ,'01', 'Serie da Nota Fiscal',GETDATE(),GETDATE(),'Serie da Nota Fiscal','C',1,0)  
+
+if not exists(select 1 from parametros with(nolock) where parametro = 'WMS_FAT_AGRUPAMENTO')
+insert into parametros (PARAMETRO,VALOR_ATUAL,DESC_PARAMETRO,PENULT_ATUALIZACAO,ULT_ATUALIZACAO,NOTA_PROGRAMADOR, TIPO_DADO,ENVIA_PARA_LOJA,PERMITE_POR_LOJA)
+values ('WMS_FAT_AGRUPAMENTO' ,'3', 'Agrupamento de itens NF',GETDATE(),GETDATE(),'Agrupamento de Itens NF','C',1,0)  
+          
+if not exists(select 1 from parametros with(nolock) where parametro = 'WMS_FAT_RATEIO_FILIAL')
+insert into parametros (PARAMETRO,VALOR_ATUAL,DESC_PARAMETRO,PENULT_ATUALIZACAO,ULT_ATUALIZACAO,NOTA_PROGRAMADOR, TIPO_DADO,ENVIA_PARA_LOJA,PERMITE_POR_LOJA)
+values ('WMS_FAT_RATEIO_FILIAL' ,'000001', 'Rateio Filial NF',GETDATE(),GETDATE(),'Rateio Filial NF','C',1,0) 
+
+if not exists(select 1 from parametros with(nolock) where parametro = 'WMS_FAT_RATEIO_CC')
+insert into parametros (PARAMETRO,VALOR_ATUAL,DESC_PARAMETRO,PENULT_ATUALIZACAO,ULT_ATUALIZACAO,NOTA_PROGRAMADOR, TIPO_DADO,ENVIA_PARA_LOJA,PERMITE_POR_LOJA)
+values ('WMS_FAT_RATEIO_CC' ,'100', 'Rateio CENTRO CUSTO NF',GETDATE(),GETDATE(),'Rateio CENTRO CUSTO NF','C',1,0)  
+
+if not exists(select 1 from parametros with(nolock) where parametro = 'WMS_FILIAL_ESTOQUE_ECOM')
+insert into parametros (PARAMETRO,VALOR_ATUAL,DESC_PARAMETRO,PENULT_ATUALIZACAO,ULT_ATUALIZACAO,NOTA_PROGRAMADOR, TIPO_DADO,ENVIA_PARA_LOJA,PERMITE_POR_LOJA)
+values ('WMS_FILIAL_ESTOQUE_ECOM' ,'ATACADO', 'Filial Estoque BASE para ECOM',GETDATE(),GETDATE(),'Filial Estoque BASE para ECOM','C',1,0)  
+
+if not exists(select 1 from parametros with(nolock) where parametro = 'WMS_TRANSF_NATUREZA')
+insert into parametros (PARAMETRO,VALOR_ATUAL,DESC_PARAMETRO,PENULT_ATUALIZACAO,ULT_ATUALIZACAO,NOTA_PROGRAMADOR, TIPO_DADO,ENVIA_PARA_LOJA,PERMITE_POR_LOJA)
+values ('WMS_TRANSF_NATUREZA' ,'120.01', 'Natureza Transferencia Estoque',GETDATE(),GETDATE(),'Natureza Transferencia Estoque','C',1,0)
+
+if not exists(select 1 from parametros with(nolock) where parametro = 'WMS_TRANSF_TRANSPORTADORA')
+insert into parametros (PARAMETRO,VALOR_ATUAL,DESC_PARAMETRO,PENULT_ATUALIZACAO,ULT_ATUALIZACAO,NOTA_PROGRAMADOR, TIPO_DADO,ENVIA_PARA_LOJA,PERMITE_POR_LOJA)
+values ('WMS_TRANSF_TRANSPORTADORA' ,'TRD TRANSPORTES', 'Transportadora Transferencia ECOM',GETDATE(),GETDATE(),'Transportadora Transferencia ECOM','C',1,0)  
+
+if not exists(select 1 from parametros with(nolock) where parametro = 'WMS_CNPJ_STAGE_VOLO')
+insert into parametros (PARAMETRO,VALOR_ATUAL,DESC_PARAMETRO,PENULT_ATUALIZACAO,ULT_ATUALIZACAO,NOTA_PROGRAMADOR, TIPO_DADO,ENVIA_PARA_LOJA,PERMITE_POR_LOJA)
+values ('WMS_CNPJ_STAGE_VOLO' ,'02926185001914', 'CNPJ a ser informado na Stage Volo',GETDATE(),GETDATE(),'CNPJ a ser informado na Stage Volo','C',1,0)  
+
+
