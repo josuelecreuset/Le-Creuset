@@ -1,0 +1,218 @@
+-- ========================================================
+-- Criação das Tabelas
+-- ========================================================
+
+CREATE TABLE Customers (
+    CustomerCode NVARCHAR(50) PRIMARY KEY,
+    CustomerName NVARCHAR(255),
+    CustomerEmail NVARCHAR(255),
+    CustomerPhone NVARCHAR(20),
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    UpdatedAt DATETIME
+);
+
+CREATE TABLE Orders (
+    OrderNumber NVARCHAR(50) PRIMARY KEY,
+    CustomerCode NVARCHAR(50) FOREIGN KEY REFERENCES Customers(CustomerCode),
+    OrderDate DATETIME DEFAULT GETDATE(),
+    TotalPrice DECIMAL(18, 2),
+    TotalTax DECIMAL(18, 2),
+    OrderStatus NVARCHAR(50) DEFAULT 'Pending',
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    UpdatedAt DATETIME
+);
+
+CREATE TABLE OrderLineItems (
+    LineItemId INT PRIMARY KEY IDENTITY(1,1),
+    OrderNumber NVARCHAR(50) FOREIGN KEY REFERENCES Orders(OrderNumber),
+    LineNumber INT,
+    VariantId NVARCHAR(50),
+    DisplayName NVARCHAR(255),
+    Quantity DECIMAL(18, 2),
+    UnitListPrice DECIMAL(18, 2),
+    UnitCustomerPrice DECIMAL(18, 2),
+    LineListPrice AS (Quantity * UnitListPrice) PERSISTED,
+    LineCustomerPrice AS (Quantity * UnitCustomerPrice) PERSISTED,
+    LineTaxAmount DECIMAL(18, 2),
+    TaxPercentage DECIMAL(5, 2),
+    CreatedAt DATETIME DEFAULT GETDATE(),
+    UpdatedAt DATETIME
+);
+
+-- ========================================================
+-- Procedimentos Armazenados
+-- ========================================================
+
+-- 1. Inserção ou Atualização de Clientes
+CREATE PROCEDURE UpsertCustomer
+    @CustomerCode NVARCHAR(50),
+    @CustomerName NVARCHAR(255),
+    @CustomerEmail NVARCHAR(255),
+    @CustomerPhone NVARCHAR(20)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF EXISTS (SELECT 1 FROM Customers WHERE CustomerCode = @CustomerCode)
+    BEGIN
+        UPDATE Customers
+        SET 
+            CustomerName = @CustomerName,
+            CustomerEmail = @CustomerEmail,
+            CustomerPhone = @CustomerPhone,
+            UpdatedAt = GETDATE()
+        WHERE CustomerCode = @CustomerCode;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO Customers (CustomerCode, CustomerName, CustomerEmail, CustomerPhone)
+        VALUES (@CustomerCode, @CustomerName, @CustomerEmail, @CustomerPhone);
+    END;
+END;
+
+-- 2. Inserção ou Atualização de Pedidos
+CREATE PROCEDURE UpsertOrder
+    @OrderNumber NVARCHAR(50),
+    @CustomerCode NVARCHAR(50),
+    @OrderDate DATETIME = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF EXISTS (SELECT 1 FROM Orders WHERE OrderNumber = @OrderNumber)
+    BEGIN
+        UPDATE Orders
+        SET 
+            CustomerCode = @CustomerCode,
+            OrderDate = ISNULL(@OrderDate, OrderDate),
+            UpdatedAt = GETDATE()
+        WHERE OrderNumber = @OrderNumber;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO Orders (OrderNumber, CustomerCode, OrderDate)
+        VALUES (@OrderNumber, @CustomerCode, ISNULL(@OrderDate, GETDATE()));
+    END;
+END;
+
+-- 3. Inserção ou Atualização de Itens de Pedido
+CREATE PROCEDURE UpsertOrderLineItem
+    @LineItemId INT = NULL,
+    @OrderNumber NVARCHAR(50),
+    @LineNumber INT,
+    @VariantId NVARCHAR(50),
+    @DisplayName NVARCHAR(255),
+    @Quantity DECIMAL(18, 2),
+    @UnitListPrice DECIMAL(18, 2),
+    @UnitCustomerPrice DECIMAL(18, 2),
+    @TaxPercentage DECIMAL(5, 2)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @LineTaxAmount DECIMAL(18, 2);
+    SET @LineTaxAmount = @Quantity * @UnitCustomerPrice * (@TaxPercentage / 100);
+
+    IF @LineItemId IS NOT NULL AND EXISTS (SELECT 1 FROM OrderLineItems WHERE LineItemId = @LineItemId)
+    BEGIN
+        UPDATE OrderLineItems
+        SET 
+            OrderNumber = @OrderNumber,
+            LineNumber = @LineNumber,
+            VariantId = @VariantId,
+            DisplayName = @DisplayName,
+            Quantity = @Quantity,
+            UnitListPrice = @UnitListPrice,
+            UnitCustomerPrice = @UnitCustomerPrice,
+            LineTaxAmount = @LineTaxAmount,
+            TaxPercentage = @TaxPercentage,
+            UpdatedAt = GETDATE()
+        WHERE LineItemId = @LineItemId;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO OrderLineItems (
+            OrderNumber, LineNumber, VariantId, DisplayName, Quantity, 
+            UnitListPrice, UnitCustomerPrice, LineTaxAmount, TaxPercentage
+        )
+        VALUES (
+            @OrderNumber, @LineNumber, @VariantId, @DisplayName, @Quantity,
+            @UnitListPrice, @UnitCustomerPrice, @LineTaxAmount, @TaxPercentage
+        );
+    END;
+END;
+
+-- ========================================================
+-- Geração de Relatórios
+-- ========================================================
+
+-- Relatório de Pedidos por Cliente
+CREATE PROCEDURE GetCustomerOrdersReport
+AS
+BEGIN
+    SELECT 
+        C.CustomerCode,
+        C.CustomerName,
+        O.OrderNumber,
+        O.OrderDate,
+        O.TotalPrice,
+        O.TotalTax,
+        O.OrderStatus
+    FROM Orders O
+    INNER JOIN Customers C ON O.CustomerCode = C.CustomerCode
+    ORDER BY C.CustomerName, O.OrderDate;
+END;
+
+-- ========================================================
+-- Triggers
+-- ========================================================
+
+-- Trigger para calcular totais do pedido após alterações em itens
+CREATE TRIGGER trg_UpdateOrderTotals
+ON OrderLineItems
+AFTER INSERT, UPDATE, DELETE
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE O
+    SET 
+        TotalPrice = (
+            SELECT SUM(LineCustomerPrice) 
+            FROM OrderLineItems 
+            WHERE OrderNumber = O.OrderNumber
+        ),
+        TotalTax = (
+            SELECT SUM(LineTaxAmount)
+            FROM OrderLineItems
+            WHERE OrderNumber = O.OrderNumber
+        )
+    FROM Orders O
+    INNER JOIN (
+        SELECT DISTINCT OrderNumber FROM inserted
+        UNION
+        SELECT DISTINCT OrderNumber FROM deleted
+    ) I ON O.OrderNumber = I.OrderNumber;
+END;
+
+-- ========================================================
+-- Consultas Complexas
+-- ========================================================
+
+-- Consulta de Itens de Pedidos com Detalhes de Cliente e Pedido
+SELECT 
+    C.CustomerCode,
+    C.CustomerName,
+    O.OrderNumber,
+    L.LineNumber,
+    L.DisplayName,
+    L.Quantity,
+    L.UnitCustomerPrice,
+    L.LineCustomerPrice,
+    L.LineTaxAmount,
+    L.TaxPercentage
+FROM OrderLineItems L
+INNER JOIN Orders O ON L.OrderNumber = O.OrderNumber
+INNER JOIN Customers C ON O.CustomerCode = C.CustomerCode
+WHERE O.OrderStatus = 'Pending'
+ORDER BY C.CustomerName, O.OrderDate, L.LineNumber;
