@@ -1,0 +1,83 @@
+import requests
+
+url = "https://environment.neomode.com.br/management/catalog/products"
+
+headers = {
+    "accept": "text/plain",
+    "content-type": "application/json"
+}
+
+response = requests.put(url, headers=headers)
+
+print(response.text)
+
+[
+    {
+        "additionalInfo": null, // (string|null) Any additional information about the product. Null if not provided.
+        "code": "5056", // (string) Unique identifier for the product.
+        "referenceCode": "5056", // (string) Reference code for the product, often matching the main code.
+        "auxCode": "0679602093514", // (string) Auxiliary code, potentially used for additional identification (e.g., EAN, GTIN).
+        "description": "<strong>O Kit Contém:</strong>...", // (string) Detailed description of the product, possibly including HTML formatting.
+        "isActive": true, // (boolean) Indicates whether the product is active and available.
+        "name": "Zippo Zippo - Masculino - Eau de Toilette - Perfume + Gel de Banho", // (string) The name of the product.
+        "releaseDate": "2014-01-29T00:00:00", // (string) Date when the product was released or added, in ISO 8601 format.
+        "keywords": null, // (string|null) Keywords for the product, used for search optimization. Null if not provided.
+        "height": 10.00, // (float) Height of the product in centimeters.
+        "lenght": 10.00, // (float) Length of the product in centimeters.
+        "weight": 0.10, // (float) Weight of the product in kilograms.
+        "width": 10.00, // (float) Width of the product in centimeters.
+        "brand": "Zippo", // (string) Brand name of the product.
+        "complementaryName": "A Zippo, símbolo do estilo americano...", // (string) Complementary description, often providing additional details.
+        "pickupOnly": false, // (boolean) Indicates if the product is available only for pickup.
+        "additionalInformation": "", // (string) Additional information that might be shown to the customer, empty if not provided.
+        "skus": [ // (array) List of SKUs (Stock Keeping Units) associated with the product.
+            {
+                "code": "8246", // (string) Unique identifier for the SKU.
+                "auxCode": "023439", // (string) Auxiliary code for the SKU.
+                "barcode": "0679602093514", // (string) Barcode for the SKU.
+                "isActive": true, // (boolean) Indicates if this SKU is active and available.
+                "name": "Kit", // (string) Name of the SKU.
+                "images": [ // (array) List of images associated with the SKU.
+                    {
+                        "imageUrl": "https://seller.domain.com.br/arquivos/ids/172529/zippo-edt-zippo.jpg?v=635266102445870000", // (string) URL of the image.
+                        "order": 1 // (integer) Order of the image in the display sequence.
+                    }
+                ],
+                "attributes": [ // (array) List of attributes specific to the SKU.
+                    {
+                        "title": "Cor", // (string) Title of the attribute.
+                        "value": "Freijó", // (string) Value of the attribute.
+                        "label": null, // (string|null) Label for the attribute, null if not provided.
+                        "order": "0" // (string) Order in which the attribute should be displayed.
+                    }
+                ]
+            }
+        ],
+        "categories": [ // (array) List of categories the product belongs to.
+            {
+                "Code": "code-01", // (string) Code of the category.
+                "Name": "Category Name", // (string) Name of the category.
+                "Children": [ // (array) Subcategories under the main category.
+                    {
+                        "Code": "sub-code-01", // (string) Code of the subcategory.
+                        "Name": "Subcategory Name" // (string) Name of the subcategory.
+                    }
+                ]
+            }
+        ],
+        "Prices": [ // (array) List of prices associated with the product.
+            {
+                "Price": 0.0, // (float) Current price of the product.
+                "OldPrice": 0.0 // (float) Previous price of the product before any discounts.
+            }
+        ],
+        "images": [], // (array) List of images directly associated with the product (not SKUs).
+        "characteristics": [ // (array) List of characteristics of the product.
+            {
+                "key": "Familia Olfativa:", // (string) Characteristic key or name.
+                "value": "Amadeirado", // (string) Characteristic value.
+                "order": 0 // (integer) Order in which the characteristic should be displayed.
+            }
+        ]
+    }
+]
