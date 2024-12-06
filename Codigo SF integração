@@ -1,0 +1,226 @@
+using System;
+using System.Data;
+using System.Data.SqlClient;
+using System.Xml;
+
+namespace OrderProcessingSystem
+{
+    public class DatabaseConnection
+    {
+        private readonly string _connectionString;
+        private SqlConnection _connection;
+
+        public DatabaseConnection(string connectionString)
+        {
+            _connectionString = connectionString;
+        }
+
+        public void Connect()
+        {
+            try
+            {
+                _connection = new SqlConnection(_connectionString);
+                _connection.Open();
+                Console.WriteLine("Conexão com o banco de dados estabelecida.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro ao conectar ao banco de dados: {ex.Message}");
+                throw;
+            }
+        }
+
+        public void Disconnect()
+        {
+            if (_connection != null && _connection.State == ConnectionState.Open)
+            {
+                _connection.Close();
+                Console.WriteLine("Conexão com o banco de dados encerrada.");
+            }
+        }
+
+        public SqlConnection GetConnection()
+        {
+            return _connection;
+        }
+    }
+
+    public class XMLProcessor
+    {
+        private readonly string _xmlFilePath;
+
+        public XMLProcessor(string xmlFilePath)
+        {
+            _xmlFilePath = xmlFilePath;
+        }
+
+        public XmlDocument LoadXML()
+        {
+            try
+            {
+                XmlDocument xmlDoc = new XmlDocument();
+                xmlDoc.Load(_xmlFilePath);
+                return xmlDoc;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro ao carregar o arquivo XML: {ex.Message}");
+                throw;
+            }
+        }
+    }
+
+    public class OrderProcessor
+    {
+        private readonly SqlConnection _connection;
+
+        public OrderProcessor(SqlConnection connection)
+        {
+            _connection = connection;
+        }
+
+        public void UpsertCustomer(string customerCode, string customerName, string email, string phone)
+        {
+            string query = @"
+                IF EXISTS (SELECT 1 FROM Customers WHERE CustomerCode = @CustomerCode)
+                    UPDATE Customers
+                    SET CustomerName = @CustomerName, CustomerEmail = @CustomerEmail, CustomerPhone = @CustomerPhone, UpdatedAt = GETDATE()
+                    WHERE CustomerCode = @CustomerCode
+                ELSE
+                    INSERT INTO Customers (CustomerCode, CustomerName, CustomerEmail, CustomerPhone, CreatedAt)
+                    VALUES (@CustomerCode, @CustomerName, @CustomerEmail, @CustomerPhone, GETDATE());
+            ";
+
+            using (SqlCommand command = new SqlCommand(query, _connection))
+            {
+                command.Parameters.AddWithValue("@CustomerCode", customerCode);
+                command.Parameters.AddWithValue("@CustomerName", customerName);
+                command.Parameters.AddWithValue("@CustomerEmail", email);
+                command.Parameters.AddWithValue("@CustomerPhone", phone);
+
+                try
+                {
+                    command.ExecuteNonQuery();
+                    Console.WriteLine($"Cliente {customerCode} processado com sucesso.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Erro ao processar cliente {customerCode}: {ex.Message}");
+                    throw;
+                }
+            }
+        }
+
+        public void UpsertOrder(string orderNumber, string customerCode, DateTime orderDate)
+        {
+            string query = @"
+                IF EXISTS (SELECT 1 FROM Orders WHERE OrderNumber = @OrderNumber)
+                    UPDATE Orders
+                    SET CustomerCode = @CustomerCode, OrderDate = @OrderDate, UpdatedAt = GETDATE()
+                    WHERE OrderNumber = @OrderNumber
+                ELSE
+                    INSERT INTO Orders (OrderNumber, CustomerCode, OrderDate, CreatedAt)
+                    VALUES (@OrderNumber, @CustomerCode, @OrderDate, GETDATE());
+            ";
+
+            using (SqlCommand command = new SqlCommand(query, _connection))
+            {
+                command.Parameters.AddWithValue("@OrderNumber", orderNumber);
+                command.Parameters.AddWithValue("@CustomerCode", customerCode);
+                command.Parameters.AddWithValue("@OrderDate", orderDate);
+
+                try
+                {
+                    command.ExecuteNonQuery();
+                    Console.WriteLine($"Pedido {orderNumber} processado com sucesso.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Erro ao processar pedido {orderNumber}: {ex.Message}");
+                    throw;
+                }
+            }
+        }
+
+        public void UpsertOrderLineItem(int lineItemId, string orderNumber, int lineNumber, string variantId, string displayName,
+            decimal quantity, decimal unitListPrice, decimal unitCustomerPrice, decimal lineTaxAmount, decimal taxPercentage)
+        {
+            string query = @"
+                IF EXISTS (SELECT 1 FROM OrderLineItems WHERE LineItemId = @LineItemId)
+                    UPDATE OrderLineItems
+                    SET OrderNumber = @OrderNumber, LineNumber = @LineNumber, VariantId = @VariantId, DisplayName = @DisplayName,
+                        Quantity = @Quantity, UnitListPrice = @UnitListPrice, UnitCustomerPrice = @UnitCustomerPrice,
+                        LineTaxAmount = @LineTaxAmount, TaxPercentage = @TaxPercentage, UpdatedAt = GETDATE()
+                    WHERE LineItemId = @LineItemId
+                ELSE
+                    INSERT INTO OrderLineItems (LineItemId, OrderNumber, LineNumber, VariantId, DisplayName, Quantity,
+                        UnitListPrice, UnitCustomerPrice, LineTaxAmount, TaxPercentage, CreatedAt)
+                    VALUES (@LineItemId, @OrderNumber, @LineNumber, @VariantId, @DisplayName, @Quantity,
+                        @UnitListPrice, @UnitCustomerPrice, @LineTaxAmount, @TaxPercentage, GETDATE());
+            ";
+
+            using (SqlCommand command = new SqlCommand(query, _connection))
+            {
+                command.Parameters.AddWithValue("@LineItemId", lineItemId);
+                command.Parameters.AddWithValue("@OrderNumber", orderNumber);
+                command.Parameters.AddWithValue("@LineNumber", lineNumber);
+                command.Parameters.AddWithValue("@VariantId", variantId);
+                command.Parameters.AddWithValue("@DisplayName", displayName);
+                command.Parameters.AddWithValue("@Quantity", quantity);
+                command.Parameters.AddWithValue("@UnitListPrice", unitListPrice);
+                command.Parameters.AddWithValue("@UnitCustomerPrice", unitCustomerPrice);
+                command.Parameters.AddWithValue("@LineTaxAmount", lineTaxAmount);
+                command.Parameters.AddWithValue("@TaxPercentage", taxPercentage);
+
+                try
+                {
+                    command.ExecuteNonQuery();
+                    Console.WriteLine($"Item {lineItemId} do pedido {orderNumber} processado com sucesso.");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Erro ao processar item {lineItemId}: {ex.Message}");
+                    throw;
+                }
+            }
+        }
+    }
+
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            string connectionString = "Server=YOUR_SERVER;Database=YOUR_DATABASE;User Id=YOUR_USERNAME;Password=YOUR_PASSWORD;";
+            string xmlFilePath = "orders.xml";
+
+            DatabaseConnection dbConnection = new DatabaseConnection(connectionString);
+            dbConnection.Connect();
+
+            XMLProcessor xmlProcessor = new XMLProcessor(xmlFilePath);
+            XmlDocument xmlDoc = xmlProcessor.LoadXML();
+
+            OrderProcessor orderProcessor = new OrderProcessor(dbConnection.GetConnection());
+
+            foreach (XmlNode customerNode in xmlDoc.SelectNodes("//Customer"))
+            {
+                string customerCode = customerNode["CustomerCode"].InnerText;
+                string customerName = customerNode["CustomerName"].InnerText;
+                string email = customerNode["Email"].InnerText;
+                string phone = customerNode["Phone"].InnerText;
+
+                orderProcessor.UpsertCustomer(customerCode, customerName, email, phone);
+            }
+
+            foreach (XmlNode orderNode in xmlDoc.SelectNodes("//Order"))
+            {
+                string orderNumber = orderNode["OrderNumber"].InnerText;
+                string customerCode = orderNode["CustomerCode"].InnerText;
+                DateTime orderDate = DateTime.Parse(orderNode["OrderDate"].InnerText);
+
+                orderProcessor.UpsertOrder(orderNumber, customerCode, orderDate);
+            }
+
+            dbConnection.Disconnect();
+        }
+    }
+}
