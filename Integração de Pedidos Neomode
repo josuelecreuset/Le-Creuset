@@ -1,0 +1,174 @@
+import requests
+
+url = "https://environment.neomode.com.br/cp/management/commerce/externalId/orders/order-id"
+
+headers = {"accept": "application/json"}
+
+response = requests.get(url, headers=headers)
+
+print(response.text)
+
+{
+  "id": "123456789", // Unique identifier of the order on the integration platform
+  "createDate": "2024-08-09T12:34:56Z", // Date and time when the order was created
+  "externalId": "MKP-0012345", // Order identifier in the marketplace
+  "channel": "marketplace", // Sales channel (e.g., "marketplace")
+  "friendlyCode": "ORD12345", // Friendly order code used for reference
+  "cpfPickUp": "123.456.789-00", // CPF of the person responsible for pickup (if applicable)
+  "cpfInvoice": "987.654.321-00", // CPF for invoice issuance
+  "invoiceUrl": "https://example.com/invoice/123456789", // URL to access the invoice (if available)
+  "dealerCode": "DLR001", // Code of the dealer handling the order (if applicable)
+  "feeAmount": 10.00, // Fee amount applied to the order
+  "isDelivery": true, // Boolean indicating if the order is for delivery (true if yes)
+  "isCvvValidated": true, // Boolean indicating if CVV validation was successful
+  "maxPickUpTime": "2024-08-10T15:00:00Z", // Maximum time allowed for pickup (if applicable)
+  "status": 3, // Numeric ID representing the current status of the order
+
+  "buyer": {
+    "cpf": "123.456.789-00", // CPF of the buyer
+    "phoneNumber": "+5511999999999", // Buyer's phone number
+    "deviceToken": "deviceToken123", // Device token for notifications (if available)
+    "imageUrl": "https://example.com/buyer/profile.jpg", // URL for buyer's profile image (if available)
+    "gender": 0, // Buyer's gender (0 for unspecified)
+    "dateOfBirth": "1990-01-01", // Buyer's date of birth (if available)
+    "address": {
+      "street": "123 Main St", // Street address of the buyer
+      "city": "São Paulo", // City of the buyer
+      "state": "SP", // State of the buyer
+      "zipCode": "12345-678", // Zip code of the buyer
+      "country": "BR" // Country of the buyer
+    }
+  },
+
+  "invoice": {
+    "key": "INVKEY123", // Invoice key (if available)
+    "number": "INV123456", // Invoice number (if available)
+    "serieNumber": "1", // Series number of the invoice
+    "totalAmount": 100.00, // Total amount of the invoice
+    "xmlUrl": "https://example.com/invoice/123456789.xml", // URL for the XML version of the invoice (if available)
+    "fileUrl": "https://example.com/invoice/123456789.pdf", // URL for the invoice file (if available)
+    "issuanceDate": "2024-08-09T12:00:00Z" // Date of issuance of the invoice
+  },
+
+  "seller": {
+    "cnpj": "12.345.678/0001-90", // Seller's CNPJ
+    "companyName": "Seller Company Ltda", // Name of the seller's company
+    "pointSaleId": "marketplace", // ID of the point of sale
+    "whatsappPhoneNumber": "+5511999998888", // WhatsApp number of the seller (if available)
+    "isEcommerce": true, // Boolean indicating if the seller is an e-commerce entity
+    "gatewayId": "GTW123", // Payment gateway ID (if applicable)
+    "credentialsString": "credentials123", // Seller's credentials (if applicable)
+    "distance": 5.0, // Distance to the delivery address (if applicable)
+    "address": {
+      "street": "456 Commerce St", // Street address of the seller
+      "city": "São Paulo", // City of the seller
+      "state": "SP", // State of the seller
+      "zipCode": "98765-432", // Zip code of the seller
+      "country": "BR" // Country of the seller
+    }
+  },
+
+  "freight": {
+    "deliveryTime": 3, // Delivery time in days
+    "calculationKey": "FRT123", // Key for freight calculation (if available)
+    "description": "Standard delivery", // Description of the freight
+    "amount": 20.00 // Amount charged for freight
+  },
+
+  "deliveryAddress": {
+    "street": "123 Main St", // Street address for delivery
+    "city": "São Paulo", // City for delivery
+    "state": "SP", // State for delivery
+    "zipCode": "12345-678", // Zip code for delivery
+    "country": "BR" // Country for delivery
+  },
+
+  "paymentInfo": {
+    "externalOrderId": "EXT123456", // External order ID related to payment
+    "isCaptured": true, // Boolean indicating if the payment was captured
+    "isAuthorized": true, // Boolean indicating if the payment was authorized
+    "acquirerMessage": "Payment approved", // Message from the acquirer about the payment
+    "amount": 110.00, // Total payment amount
+    "quantityInstallments": 3, // Number of installments
+    "paymentMethod": {
+      "type": "Credit Card", // Type of payment method
+      "brand": "Visa", // Brand of the payment method
+      "cardHolderName": "John Doe", // Cardholder's name
+      "cardLastDigits": "1234" // Last digits of the card used for payment
+    }
+  },
+
+  "items": [
+    {
+      "quantity": 2, // Quantity of the item
+      "sku": {
+        "code": "SKU123456", // SKU code
+        "productName": "Product A", // Name of the product
+        "productDescription": "Description of Product A" // Description of the product
+      },
+      "unitPrice": 30.00, // Unit price of the item
+      "totalAmount": 60.00 // Total amount for the item
+    },
+    {
+      "quantity": 1,
+      "sku": {
+        "code": "SKU654321",
+        "productName": "Product B",
+        "productDescription": "Description of Product B"
+      },
+      "unitPrice": 40.00,
+      "totalAmount": 40.00
+    }
+  ],
+
+  "steps": [
+    {
+      "description": "Order placed", // Description of the status
+      "status": 1, // Numeric status code
+      "createDate": "2024-08-09T12:34:56Z" // Date and time when the status was updated
+    },
+    {
+      "description": "Payment confirmed",
+      "status": 2,
+      "createDate": "2024-08-09T13:00:00Z"
+    },
+    {
+      "description": "Order shipped",
+      "status": 3,
+      "createDate": "2024-08-10T09:00:00Z"
+    }
+  ],
+
+  "actionLogs": [
+    {
+      "displayMessage": "Order received", // Message displayed about the action
+      "internalMessage": "Order logged in system", // Internal message about the action
+      "issuer": "System", // Entity that issued the action
+      "type": "Order", // Type of action performed
+      "createDate": "2024-08-09T12:34:56Z" // Date and time when the action was logged
+    },
+    {
+      "displayMessage": "Payment processed",
+      "internalMessage": "Payment confirmed by gateway",
+      "issuer": "Payment Gateway",
+      "type": "Payment",
+      "createDate": "2024-08-09T13:00:00Z"
+    }
+  ],
+
+  "buttons": [
+    {
+      "type": "Cancel", // Type of button action
+      "url": "https://example.com/order/cancel/123456789", // URL to perform the action
+      "label": "Cancel Order" // Label displayed on the button
+    }
+  ],
+
+  "hasFeeInstallment": true, // Boolean indicating if there is a fee for installment payments
+  "maxInstallmentsWithTax": 12, // Maximum number of installments allowed with tax
+  "discountAmount": 5.00, // Total discount amount applied to the order
+  "subTotalAmount": 95.00, // Subtotal amount of the order
+  "freightAmount": 20.00, // Freight amount for the order
+  "totalWithoutFeeAmount": 115.00, // Total amount without fees
+  "totalAmount": 120.00 // Total amount of the order
+}
