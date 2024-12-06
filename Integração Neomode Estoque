@@ -1,0 +1,25 @@
+import requests
+
+url = "https://environment.neomode.com.br/management/catalog/stocks"
+
+headers = {
+    "accept": "application/json",
+    "content-type": "application/json"
+}
+
+response = requests.put(url, headers=headers)
+
+print(response.text)
+
+[
+    {
+        "Quantity" : 100,
+        "SellerCode" : "1", // seller code
+        "SkuCode" : "1780.23.0"
+    },
+    {
+        "Quantity" : 100,
+        "SellerCode" : "63845114000152", // cnpj
+        "SkuCode" : "1780.23.0"
+    }
+]
