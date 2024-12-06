@@ -1,0 +1,27 @@
+import requests
+
+url = "https://environment.neomode.com.br/management/catalog/prices"
+
+headers = {
+    "accept": "text/plain",
+    "content-type": "application/json"
+}
+
+response = requests.put(url, headers=headers)
+
+print(response.text)
+
+[
+    {
+        "Price" : 12.34,
+        "OldPrice" : 23.45,
+        "SellerCode" : "1", // seller code
+        "ProductCode" : "48484"
+    },
+    {
+        "Price" : 45.67,
+        "OldPrice" : 56.78,
+        "SellerCode" : "63845114000152", // cnpj
+        "ProductCode" : "48484"
+    }
+]
