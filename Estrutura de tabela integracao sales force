@@ -1,0 +1,32 @@
+-- Procedure to process order line items
+CREATE PROCEDURE ProcessOrderLineItem
+    @LineItemId INT,
+    @OrderNumber NVARCHAR(50),
+    @Quantity DECIMAL(18, 2),
+    @UnitCustomerPrice DECIMAL(18, 2),
+    @LineTaxAmount DECIMAL(18, 2)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF EXISTS (
+        SELECT 1 FROM OrderLineItems WHERE LineItemId = @LineItemId
+    )
+    BEGIN
+        -- Update existing line item
+        UPDATE OrderLineItems
+        SET 
+            Quantity = @Quantity,
+            UnitCustomerPrice = @UnitCustomerPrice,
+            LineTaxAmount = @LineTaxAmount,
+            UpdatedAt = GETDATE()
+        WHERE LineItemId = @LineItemId;
+    END
+    ELSE
+    BEGIN
+        -- Insert new line item
+        INSERT INTO OrderLineItems (LineItemId, OrderNumber, Quantity, UnitCustomerPrice, LineTaxAmount, CreatedAt)
+        VALUES (@LineItemId, @OrderNumber, @Quantity, @UnitCustomerPrice, @LineTaxAmount, GETDATE());
+    END;
+END;
+GO
