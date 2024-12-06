@@ -1,0 +1,7 @@
+cd order_processing_system
+git init
+git add .
+git commit -m "Initial commit with SQL, Python, and Node.js scripts"
+git branch -M main
+git remote add origin https://github.com/yourusername/order_processing_system.git
+git push -u origin main
