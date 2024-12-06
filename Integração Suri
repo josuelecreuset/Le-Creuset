@@ -1,0 +1,31 @@
+curl --location 'CHATBOT-URL/api/messages/send' \
+--data '{
+    "userId": "<Id do contato>",
+    "message": {
+        "text": "conteúdo da mensagem"
+    },
+    "isTemplate": false
+}'
+
+{
+  "success": true,
+  "data": [
+    {
+      "id": "cb9996",
+      "Name": "teste"
+    },
+    {
+      "id": "cb9997",
+      "Name": "teste2"
+    },
+    {
+      "id": "cb9998",
+      "Name": "teste 3"
+    },
+    {
+      "id": "cb9999",
+      "Name": "teste 3"
+    }
+  ],
+  "error": null
+}
