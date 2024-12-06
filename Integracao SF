@@ -1,0 +1,29 @@
+import xml.etree.ElementTree as ET
+
+def parse_xml_to_sql(xml_file):
+    tree = ET.parse(xml_file)
+    root = tree.getroot()
+
+    sql_statements = []
+
+    for record in root.findall(".//record"):
+        line_item_id = record.find("LineItemId").text
+        order_number = record.find("OrderNumber").text
+        quantity = record.find("Quantity").text
+        unit_customer_price = record.find("UnitCustomerPrice").text
+        line_tax_amount = record.find("LineTaxAmount").text
+
+        sql = f"""
+        INSERT INTO OrderLineItems (LineItemId, OrderNumber, Quantity, UnitCustomerPrice, LineTaxAmount)
+        VALUES ({line_item_id}, '{order_number}', {quantity}, {unit_customer_price}, {line_tax_amount});
+        """
+        sql_statements.append(sql)
+
+    return sql_statements
+
+# Example usage
+xml_file = "orders.xml"
+sql_commands = parse_xml_to_sql(xml_file)
+
+with open("insert_orders.sql", "w") as file:
+    file.writelines(sql_commands)
