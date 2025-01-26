@@ -1,0 +1,131 @@
+import requests
+import pyodbc
+import logging
+from decimal import Decimal
+import urllib3
+import time
+
+# Desabilitar warnings sobre SSL
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Configuração de logging
+logging.basicConfig(
+    filename='neomode_price_update.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+# Variável global para armazenar o token e evitar requisições repetidas
+access_token = None
+
+# Sessão para reuso nas requisições
+session = requests.Session()
+
+# Função para obter o token de autenticação
+def get_access_token():
+    global access_token
+    if access_token:
+        return access_token
+
+    logging.info("Obtendo token de acesso...")
+    url = "https://environment.neomode.com.br/auth/token/anonymous" # trocar <environment> por api para produção e dev-api pra staging
+
+    data = {
+        "clientId": "l3cr3u$3t@@", # Id ficticio
+        "clientSecret": "gdsuvfjndcfyvgahbij6398r050-34", # Chave ficticia
+        "scope": "lori"
+    }
+
+    headers = {'Content-Type': 'application/json'}
+
+    try:
+        response = session.post(url, headers=headers, json=data, verify=False, timeout=10)
+        if response.status_code == 200:
+            access_token = response.json().get("content", {}).get("accessToken")
+            logging.info("Token obtido com sucesso.")
+            return access_token
+        else:
+            logging.error(f"Erro ao obter token: {response.status_code}")
+            logging.error(response.text)
+            return None
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Erro de conexão ao obter token: {str(e)}")
+        return None
+
+# Função para atualizar preços em lote
+def update_prices_in_bulk(prices):
+    access_token = get_access_token()
+    if access_token is None:
+        logging.error("Token de acesso não obtido.")
+        return
+
+    url = "https://environment.neomode.com.br/management/catalog/prices?SellerMatchCode=Cnpj" # trocar <environment> por <api> para produção e <hlg-api> pra staging
+    headers = {
+        'accept': 'application/json',
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/json'
+    }
+
+    payload = [
+        {
+            "Price": float(price) if isinstance(price, Decimal) else price,
+            "OldPrice": float(old_price) if isinstance(old_price, Decimal) else old_price,
+            "SellerCode": str(seller_code),
+            "ProductCode": str(product_code).strip()
+        }
+        for product_code, old_price, price, seller_code in prices
+    ]
+
+    try:
+        response = session.put(url, headers=headers, json=payload, verify=False, timeout=10)
+        if response.status_code == 202:
+            logging.info("Preços atualizados com sucesso.")
+        else:
+            logging.error(f"Erro ao atualizar preços em lote: {response.status_code}")
+            logging.error(response.text)
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Erro de conexão ao atualizar preços em lote: {str(e)}")
+
+# Função para conectar ao SQL Server
+def connect_to_sql():
+    logging.info("Conectando ao SQL Server...")
+    try:
+        conn = pyodbc.connect(
+            'DRIVER={ODBC Driver 17 for SQL Server};'
+            'SERVER=1;'
+            'DATABASE=1;'
+            'UID=1;'
+            'PWD=1'
+        )
+        logging.info("Conexão ao SQL Server estabelecida.")
+        return conn
+    except Exception as e:
+        logging.error(f"Erro ao conectar ao SQL Server: {str(e)}")
+        return None
+
+# Função para buscar os preços que precisam ser atualizados
+def get_prices_to_update(conn):
+    logging.info("Buscando produtos e preços para atualização...")
+    cursor = conn.cursor()
+    cursor.execute("""SELECT * FROM W_PRECO_NEOMODE;""")
+    return cursor.fetchall()
+
+# Função para processar a atualização de preços em lote
+def process_price_updates():
+    conn = connect_to_sql()
+    if conn is None:
+        logging.error("Conexão ao banco de dados falhou. Encerrando o processo.")
+        return
+    print("Processo de atualização de preços concluído.")
+
+    prices = get_prices_to_update(conn)
+    if prices:
+        update_prices_in_bulk(prices)
+    else:
+        logging.info("Nenhum preço para atualizar.")
+
+    conn.close()
+
+# Execução do código
+if __name__ == "__main__":
+    process_price_updates()
