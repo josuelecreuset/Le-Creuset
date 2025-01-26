@@ -1,0 +1,128 @@
+import requests
+import pyodbc
+import logging
+import urllib3
+
+# Desabilitar warnings sobre SSL
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Configuração de logging
+logging.basicConfig(
+    filename='neomode_stock_update.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+# Variável global para armazenar o token e evitar requisições repetidas
+access_token = None
+
+# Sessão para reuso nas requisições
+session = requests.Session()
+
+# Função para obter o token de autenticação
+def get_access_token():
+    global access_token
+    if access_token:
+        return access_token
+
+    logging.info("Obtendo token de acesso...")
+    url = "https://api.neomode.com.br/auth/token/anonymous"
+
+    data = {
+        "clientId": "leknbduik", # ID ficticio 
+        "clientSecret": "ycjghkjSHKJHIOkjmlçoghbjghhnmi83", # chave ficticia
+        "scope": "lori"
+    }
+
+    headers = {'Content-Type': 'application/json'}
+
+    try:
+        response = session.post(url, headers=headers, json=data, verify=False, timeout=10)
+        if response.status_code == 200:
+            access_token = response.json().get("content", {}).get("accessToken")
+            logging.info("Token obtido com sucesso.")
+            return access_token
+        else:
+            logging.error(f"Erro ao obter token: {response.status_code}")
+            logging.error(response.text)
+            return None
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Erro de conexão ao obter token: {str(e)}")
+        return None
+
+# Função para atualizar estoque em lote
+def update_stock_in_bulk(stock):
+    access_token = get_access_token()
+    if access_token is None:
+        logging.error("Token de acesso não obtido.")
+        return
+
+    url = "https://api.neomode.com.br/management/catalog/stocks?SellerMatchCode=Cnpj"
+    headers = {
+        'accept': 'application/json',
+        'Authorization': f'Bearer {access_token}',
+        'Content-Type': 'application/json'
+    }
+
+    payload = [
+        {
+            "Quantity": int(Quantity),
+            "SellerCode": str(seller_code),
+            "SkuCode": str(Sku_Code).strip()
+        }
+        for Sku_Code, seller_code, Quantity in stock
+    ]
+
+    try:
+        response = session.put(url, headers=headers, json=payload, verify=False, timeout=10)
+        if response.status_code == 202:
+            logging.info("Estoque atualizado com sucesso.")
+        else:
+            logging.error(f"Erro ao atualizar estoque em lote: {response.status_code}")
+            logging.error(response.text)
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Erro de conexão ao atualizar estoque em lote: {str(e)}")
+
+# Função para conectar ao SQL Server
+def connect_to_sql():
+    logging.info("Conectando ao SQL Server...")
+    try:
+        conn = pyodbc.connect(
+            'DRIVER={ODBC Driver 17 for SQL Server};'
+            'SERVER=1;'
+            'DATABASE=1;'
+            'UID=1;'
+            'PWD=1'
+        )
+        logging.info("Conexão ao SQL Server estabelecida.")
+        return conn
+    except Exception as e:
+        logging.error(f"Erro ao conectar ao SQL Server: {str(e)}")
+        return None
+
+# Função para buscar os estoques que precisam ser atualizados
+def get_stock_to_update(conn):
+    logging.info("Buscando produtos e estoque para atualização...")
+    cursor = conn.cursor()
+    cursor.execute("""SELECT * FROM W_ESTOQUE_NEOMODE;""")
+    return cursor.fetchall()
+
+# Função para processar a atualização de estoque em lote
+def process_stock_updates():
+    conn = connect_to_sql()
+    if conn is None:
+        logging.error("Conexão ao banco de dados falhou. Encerrando o processo.")
+        return
+    print("Processo de atualização de estoque concluído.")
+
+    stock = get_stock_to_update(conn)
+    if stock:
+        update_stock_in_bulk(stock)
+    else:
+        logging.info("Nenhum estoque para atualizar.")
+
+    conn.close()
+
+# Execução do código
+if __name__ == "__main__":
+    process_stock_updates()
