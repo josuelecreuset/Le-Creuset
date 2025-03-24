@@ -1,0 +1,197 @@
+import requests
+import pyodbc
+import logging
+import urllib3
+from datetime import datetime
+import xml.etree.ElementTree as ET
+import time
+
+# Desabilitar warnings sobre SSL
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Configuração de logging
+logging.basicConfig(
+    filename='neomode_envia_nf.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+# Variável global para armazenar o token e evitar requisições repetidas
+access_token = None
+
+# Sessão para reuso nas requisições
+session = requests.Session()
+
+# Função para obter o token de autenticação
+def get_access_token():
+    global access_token
+    if access_token:
+        return access_token
+
+    logging.info("Obtendo token de acesso...")
+    url = "https://api.neomode.com.br/auth/token/anonymous"
+
+    data = {
+        "clientId": "l9cter45etst62",  # Credenciais ficticias
+        "clientSecret": "shjgbnDHTahijfn8944sdfg6hdbfjna4156659" # Credenciais ficticias
+        "scope": "lori"
+    }
+
+    headers = {'Content-Type': 'application/json'}
+
+    try:
+        response = session.post(url, headers=headers, json=data, verify=False, timeout=10)
+        if response.status_code == 200:
+            access_token = response.json().get("content", {}).get("accessToken")
+            logging.info("Token obtido com sucesso.")
+            return access_token
+        elif response.status_code == 400:
+            logging.error("Erro ao obter token: Dados inválidos (400).")
+            logging.error(response.text)
+            return None
+        else:
+            logging.error(f"Erro ao obter token: {response.status_code}")
+            logging.error(response.text)
+            return None
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Erro de conexão ao obter token: {str(e)}")
+        return None
+
+# Função para enviar a nota fiscal
+class Pedido:
+    def __init__(self, external_id, key, number, serieNumber, issuanceDate):
+        self.external_id = external_id
+        self.key = key
+        self.number = number
+        self.serieNumber = serieNumber
+        self.issuanceDate = issuanceDate
+
+def send_nf(nfe_row):
+    access_token = get_access_token()
+    if access_token is None:
+        logging.error("Token de acesso não obtido.")
+        return False
+
+    pedido = Pedido(*nfe_row)
+
+    # Converte a string de data para o formato ISO 8601
+    try:
+        issuance_date_obj = datetime.strptime(pedido.issuanceDate, "%Y-%m-%d %H:%M:%S")
+        issuance_date_str = issuance_date_obj.isoformat() + "Z"
+    except ValueError as e:
+        logging.error(f"Erro ao converter data: {str(e)}")
+        logging.error(f"Data problematica: {pedido.issuanceDate}")
+        return False
+
+    logging.info(f"Enviando NF {pedido.number}...")
+    url = f"https://api.neomode.com.br/cp/management/commerce/orders/external/{pedido.external_id}/invoicedetails"
+
+    headers = {
+        'content-type': 'application/json',
+        'Authorization': f'Bearer {access_token}'
+    }
+
+    payload = {
+        "invoice": {
+            "key": pedido.key.strip(),
+            "number": pedido.number.strip(),
+            "serieNumber": pedido.serieNumber.strip(),
+            "xmlUrl": None,
+            "fileUrl": None,
+            "issuanceDate": issuance_date_str
+        }
+    }
+
+    retries = 5
+    delay = 5  # segundos (atraso inicial aumentado)
+
+    for i in range(retries):
+        try:
+            response = session.put(url, headers=headers, json=payload, verify=False, timeout=10) #alteração do metodo post para put
+            if response.status_code == 204:
+                logging.info(f"NF {pedido.number} enviada com sucesso.")
+                return True
+            elif response.status_code == 400:
+                logging.error(f"Erro ao enviar NF {pedido.number}: Dados inválidos (400).")
+                logging.error(response.text)
+                return False
+            elif response.status_code == 429 or response.status_code == 1015:
+                logging.error(f"Erro ao enviar NF {pedido.number}: Rate Limited. Tentativa {i + 1} de {retries}.")
+                time.sleep(delay)
+                delay *= 2  # Aumenta o atraso exponencialmente
+            else:
+                logging.error(f"Erro ao enviar NF {pedido.number}: {response.status_code}")
+                logging.error(response.text)
+                return False
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Erro de conexão ao enviar NF {pedido.number}: {str(e)}")
+            return False
+        time.sleep(1) #adiciona um delay de 1 segundo entre as requisições
+    return False
+    
+#função para informar que a nota foi enviada
+def nf_enviada(nfes):
+    conn = connect_to_sql()
+    if conn is None:
+        return
+
+    cursor = conn.cursor()
+    external_ids = [nfe[0] for nfe in nfes]
+    placeholders = ','.join(['?'] * len(external_ids)) #cria os placeholders
+    try:
+        cursor.execute(f"""UPDATE orders_neomode SET nf_enviada = '1' WHERE external_id IN ({placeholders});""", external_ids) #passa a lista de ids como parametro
+        conn.commit()
+        logging.info(f"Tabela orders_neomode atualizada com sucesso para os IDs: {external_ids}.")
+    except Exception as e:
+        logging.error(f"Erro ao atualizar a tabela orders_neomode: {str(e)}")
+    finally:
+        conn.close()
+
+    
+# Função para conectar ao SQL Server
+def connect_to_sql():
+    logging.info("Conectando ao SQL Server...")
+    try:
+        conn = pyodbc.connect(
+            'DRIVER={ODBC Driver 17 for SQL Server};'
+            'SERVER=753.159.486.23;' # Credenciais ficticias
+            'DATABASE=PRETENDFAKEDB;' # Credenciais ficticias
+            'UID=USER123;' # Credenciais ficticias
+            'PWD=SENHAS123' # Credenciais ficticias
+        )
+        logging.info("Conexão ao SQL Server estabelecida.")
+        return conn
+    except Exception as e:
+        logging.error(f"Erro ao conectar ao SQL Server: {str(e)}")
+        return None
+
+# Função para buscar as notas que precisam ser enviadas
+def get_nfe_to_send(conn):
+    logging.info("Buscando Notas fiscais para envio...")
+    cursor = conn.cursor()
+    cursor.execute("""SELECT * FROM W_NF_NEOMODE;""")
+    nfes = cursor.fetchall()
+    if not nfes:
+        logging.info("Nenhuma Nota Fiscal encontrada para envio.")
+    return nfes
+
+# Função principal
+def main():
+    conn = connect_to_sql()
+    if conn is None:
+        return
+
+    try:
+        nfes = get_nfe_to_send(conn)
+        nfes_sucesso = []
+        for nfe in nfes:
+            if send_nf(nfe):
+                nfes_sucesso.append(nfe)
+        if nfes_sucesso:
+            nf_enviada(nfes_sucesso)
+    finally:
+        if conn:
+            conn.close()
+
+if __name__ == "__main__":
+    main() 
