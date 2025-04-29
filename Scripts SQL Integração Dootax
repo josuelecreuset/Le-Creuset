@@ -1,0 +1,50 @@
+_______________________________________________________________________________________________________________________________________________________________________________________________________
+CRIA TABELA DE CONTROLE DOS XML ENVIADOS PARA DOOTAX E E-SALES
+_______________________________________________________________________________________________________________________________________________________________________________________________________
+
+CREATE TABLE [DBO].[LC_ENVIADO_XML_INTEGRACAO](
+
+[ID_XML] [INT] IDENTITY (1,1) NOT NULL,
+[PEDIDO] [VARCHAR](12) NULL,
+[CHAVE_NFE] [VARCHAR](44) NULL,
+[XML_FATURAMENTO] [TEXT] NULL,
+[ENVIADO_DOOTAX] [DATETIME] NULL,
+[ENVIADO_ESALES] [DATETIME] NULL,
+[NF_SAIDA] [VARCHAR](12) NULL,
+
+PRIMARY KEY CLUSTERED 
+(
+	[ID_XML] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+
+_______________________________________________________________________________________________________________________________________________________________________________________________________
+CRIA VIEW QUE ENVIA OS DADOS PARA O EXECUTAVEL
+_______________________________________________________________________________________________________________________________________________________________________________________________________
+
+
+CREATE VIEW W_ENVIA_XML_DOOTAX AS
+
+SELECT
+	A.OBS_TRANSPORTE AS PEDIDO,
+	A.CHAVE_NFE,
+	CAST(REPLACE(CAST(C.XML_FATURAMENTO AS VARCHAR (MAX)),'02926185002309', '02926185002481') AS XML) AS XML_FATURAMENTO,
+	A.NF_SAIDA
+FROM
+	FATURAMENTO A
+JOIN
+	CADASTRO_CLI_FOR B
+	ON A.NOME_CLIFOR = B.NOME_CLIFOR
+JOIN
+	VOLO..IT4_WMS_DOCUMENTO C
+	ON A.CHAVE_NFE = C.CHAVE_NFE
+LEFT JOIN
+	LC_ENVIADO_XML_INTEGRACAO D
+	ON A.CHAVE_NFE = D.CHAVE_NFE
+WHERE
+	A.NATUREZA_SAIDA IN ('100.02', '100.12')
+	AND B.INDICADOR_FISCAL_TERCEIRO = '8'
+	AND B.UF <> 'MG'
+	AND A.PROTOCOLO_AUTORIZACAO_NFE IS NOT NULL
+	AND D.ENVIADO_DOOTAX IS NULL
+	AND A.EMISSAO >= '20250417'
