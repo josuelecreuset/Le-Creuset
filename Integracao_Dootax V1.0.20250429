@@ -1,0 +1,150 @@
+import pyodbc
+import os
+import logging
+import xml.etree.ElementTree as ET
+
+
+# Configuração de logging
+logging.basicConfig(
+    filename='Envia_XML_Dootax.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Example of connecting to a database using pyodbc
+def connect_to_database(server, database, username, password):
+    try:
+        connection_string = (
+            f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+            f"SERVER=1XX.XXX.XXX.27;"
+            f"DATABASE=DB*******ERP;"
+            f"UID=********;"
+            f"PWD=*********;"
+        )
+        connection = pyodbc.connect(connection_string)
+        logging.info("Connection successful!")
+        return connection
+    except pyodbc.Error as e:
+        logging.error("Error connecting to database: %s", e)
+        return None
+
+# Faz leitura da view e extrai o XML
+def read_view_and_extract_xml(connection):
+    try:
+        cursor = connection.cursor()
+        logging.info("Executing query to read view...")
+        cursor.execute("SELECT * FROM W_ENVIA_XML_DOOTAX")  
+        rows = cursor.fetchall()
+        logging.info("Query executed successfully. Processing rows...")
+        xml_data = []
+        for row in rows:
+            if len(row) > 2:  # Ensure the row has at least 3 columns
+                xml_data.append(row[2])
+            else:
+                logging.warning("Row does not have the expected structure: %s", row)
+        logging.info("XML data extracted successfully.")
+        return xml_data
+    except pyodbc.Error as e:
+        logging.error("Error reading view or extracting XML: %s", e)
+        return []
+
+# Classe Pedido que representa o XML
+class Pedido:
+    def __init__(self, xml_data, CHAVE_NFE, PEDIDO, NF_ID):
+        self.xml_data = xml_data
+        self.CHAVE_NFE = CHAVE_NFE
+        self.PEDIDO = PEDIDO
+        self.NF_ID = NF_ID
+
+    def __str__(self):
+        return f"XML: {self.xml_data}, CHAVE_NFE: {self.CHAVE_NFE}, PEDIDO: {self.PEDIDO}, NF_ID: {self.NF_ID}"
+
+    def to_xml(self):
+        try:
+            # Parse the XML string into an ElementTree object
+            root = ET.fromstring(self.xml_data)
+            return ET.tostring(root, encoding='unicode')
+        except ET.ParseError as e:
+            logging.error("Error parsing XML data: %s", e)
+            return None
+
+    def save_to_file(self, directory):
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        file_path = os.path.join(directory, f"{self.CHAVE_NFE}-procNFe.xml")
+        with open(file_path, 'w', encoding='utf-8') as file:
+            file.write(self.to_xml())
+        logging.info(f"XML saved to {file_path}")
+        return file_path
+
+    def insert_control_table(self, connection):
+        try:
+            cursor = connection.cursor()
+            logging.info("Inserting into control table...")
+            cursor.execute(
+                "INSERT INTO LC_ENVIADO_XML_INTEGRACAO (CHAVE_NFE, PEDIDO, NF_SAIDA, XML_FATURAMENTO, Enviado_dootax) VALUES (?, ?, ?, ?, GETDATE())",
+                self.CHAVE_NFE, self.PEDIDO, self.NF_ID, self.xml_data
+            )
+            connection.commit()
+            logging.info("Insert successful!")
+        except pyodbc.Error as e:
+            logging.error("Error inserting into control table: %s", e)
+            return False
+        return True
+
+# Função principal
+def main():
+    # Configurações do banco de dados
+    server = '1XX.XXX.XXX.27'
+    database = 'DB*******ERP'
+    username = '********'
+    password = '*********'
+
+    # Definir a pasta de destino para os arquivos XML
+    pasta_destino = "D:\Data\Integrations\Production\Dootax"
+
+    # Conectar ao banco de dados
+    connection = connect_to_database(server, database, username, password)
+    if connection is None:
+        logging.error("Failed to connect to the database. Exiting...")
+        return
+
+    # Ler a view e extrair o XML
+    try:
+        cursor = connection.cursor()
+        logging.info("Executing query to read view...")
+        cursor.execute("SELECT * FROM W_ENVIA_XML_DOOTAX")
+        columns = [column[0] for column in cursor.description]  # Obter nomes das colunas
+        rows = cursor.fetchall()
+        logging.info("Query executed successfully. Processing rows...")
+    except pyodbc.Error as e:
+        logging.error("Error reading view: %s", e)
+        connection.close()
+        return
+
+    # Processar cada linha
+    for row in rows:
+        try:
+            row_dict = dict(zip(columns, row))
+            xml_data = row_dict.get("XML_FATURAMENTO")
+            CHAVE_NFE = row_dict.get("CHAVE_NFE")
+            PEDIDO = row_dict.get("PEDIDO")
+            NF_ID = row_dict.get("NF_SAIDA")
+            # Garantir que os dados necessários estão presentes
+            if not all([xml_data, CHAVE_NFE, PEDIDO, NF_ID]):
+                logging.warning("Row does not have the expected structure: %s", row_dict)
+                continue
+
+            pedido = Pedido(xml_data, CHAVE_NFE, PEDIDO, NF_ID)
+            file_path = pedido.save_to_file(pasta_destino)  
+            if pedido.insert_control_table(connection):
+                logging.info(f"Pedido {CHAVE_NFE} processed successfully.")
+        except Exception as e:
+            logging.error("Error processing XML: %s", e)
+
+    # Fechar a conexão com o banco de dados
+    connection.close()
+    logging.info("Database connection closed. Exiting...")
+
+
+if __name__ == "__main__":
+    main()
